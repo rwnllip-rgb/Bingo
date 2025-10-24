@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bingo - Fortnite (Local)</title>
+  <style>
+    :root{
+      --bg1:#071020;
+      --bg2:#0e2433;
+      --card:#0b1520;
+      --muted:#9aa4b2;
+      --blue-strong:#1e90ff;
+      --red-strong:#ff5c6c;
+      --neutral:#1d2933;
+      --glass: rgba(255,255,255,0.03);
+      --rounded:14px;
+      font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#e7f2fb}
+    /* full screen layout */
+    .app{
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      padding:22px;
+      align-items:stretch;
+      justify-content:flex-start;
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{
+      width:56px;height:56px;border-radius:12px;
+      background:linear-gradient(135deg,var(--blue-strong),var(--red-strong));
+      display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#071426;
+      box-shadow:0 10px 30px rgba(2,6,23,0.6);
+    }
+    h1{margin:0;font-size:20px}
+    header p{margin:0;color:var(--muted);font-size:13px}
+
+    .top-controls{display:flex;gap:12px;align-items:center}
+    .team-btn{
+      padding:10px 14px;border-radius:12px;background:var(--glass);border:1px solid rgba(255,255,255,0.03);
+      cursor:pointer;color:inherit;font-weight:600;
+    }
+    .team-btn.blue.active{box-shadow:0 8px 28px rgba(30,144,255,0.12);border-color:rgba(30,144,255,0.16)}
+    .team-btn.red.active{box-shadow:0 8px 28px rgba(255,92,108,0.10);border-color:rgba(255,92,108,0.14)}
+
+    /* main content full area: board left, side right on wide screens */
+    .content{
+      display:flex;gap:18px;flex:1;align-items:stretch;
+    }
+
+    /* board area occupies most of screen */
+    .board-area{
+      flex:1;
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:16px;padding:20px;
+      display:flex;flex-direction:column;gap:14px;
+      min-width:0; /* allow shrink */
+      box-shadow:0 12px 40px rgba(2,6,23,0.5);
+    }
+
+    /* make grid large and centered */
+    .board{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:12px;
+      flex:1;
+      align-items:stretch;
+    }
+
+    .cell{
+      background:linear-gradient(180deg,var(--neutral),#151d24);
+      border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center;align-items:center;
+      text-align:center;font-size:15px;line-height:1.2;cursor:pointer;user-select:none;
+      min-height:110px; /* bigger cells */
+      transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      box-shadow:0 6px 18px rgba(2,6,23,0.5), inset 0 -6px 20px rgba(0,0,0,0.25);
+      color:#eaf4ff;
+    }
+    .cell:active{transform:translateY(1px)}
+    .cell .challenge{font-weight:600;font-size:14px}
+    .cell .tag{font-size:12px;color:var(--muted);margin-top:8px}
+
+    .cell.blue{
+      background:linear-gradient(180deg,var(--blue-strong), rgba(30,144,255,0.12));
+      box-shadow:0 8px 24px rgba(30,144,255,0.06), inset 0 -6px 22px rgba(0,0,0,0.22);
+      color:#071426;
+    }
+    .cell.red{
+      background:linear-gradient(180deg,var(--red-strong), rgba(255,92,108,0.10));
+      box-shadow:0 8px 24px rgba(255,92,108,0.06), inset 0 -6px 22px rgba(0,0,0,0.18);
+      color:#071426;
+    }
+    .cell.disabled{opacity:0.62;cursor:not-allowed}
+    .cell.neutral{color:#eaf4ff}
+
+    /* side panel */
+    .side{
+      width:310px;min-width:220px;display:flex;flex-direction:column;gap:12px;
+    }
+    .card{
+      background:var(--card);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.02);
+    }
+    .scores{display:flex;gap:12px;justify-content:space-between}
+    .score-pill{flex:1;padding:12px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+    .score-pill b{font-size:22px}
+    .score-blue{background:linear-gradient(180deg, rgba(30,144,255,0.06), rgba(30,144,255,0.02));border:1px solid rgba(30,144,255,0.06)}
+    .score-red{background:linear-gradient(180deg, rgba(255,92,108,0.04), rgba(255,92,108,0.02));border:1px solid rgba(255,92,108,0.06)}
+
+    .muted{color:var(--muted);font-size:13px}
+
+    .tools{display:flex;gap:8px}
+    .btn{padding:10px;border-radius:10px;border:none;cursor:pointer;background:var(--glass)}
+    .btn.warn{background:linear-gradient(180deg, rgba(255,92,108,0.06), rgba(255,92,108,0.02))}
+
+    /* modal */
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(0,0,0,0.36), rgba(0,0,0,0.56));backdrop-filter:blur(4px)}
+    .modal{background:linear-gradient(180deg,#071426,#0b2236);padding:22px;border-radius:14px;min-width:320px;text-align:center}
+    .modal h2{margin:0;font-size:20px}
+    .modal p{color:var(--muted);margin:8px 0 0 0}
+
+    @media (max-width:1100px){
+      .content{flex-direction:column}
+      .side{width:100%}
+      .cell{min-height:90px;font-size:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">B</div>
+        <div>
+          <h1>Bingo - Fortnite</h1>
+          <p class="muted">شبكة 5×5 — فريقان: الأزرق و الأحمر (محلي)</p>
+        </div>
+      </div>
+
+      <div class="top-controls">
+        <button id="joinBlue" class="team-btn blue">فريق أزرق</button>
+        <button id="joinRed" class="team-btn red">فريق أحمر</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="board-area card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px">
+          <div class="muted" id="myTeamLabel">لم تنضم لأي فريق</div>
+          <div class="muted" id="statusMsg"></div>
+        </div>
+
+        <div id="board" class="board" aria-label="Bingo board"></div>
+      </section>
+
+      <aside class="side">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="muted">نقاط الفرق</div>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">أول من يصل 13 خانة أو أي صف يفوز</div>
+          </div>
+          <div class="scores" style="margin-top:12px">
+            <div class="score-pill score-blue">
+              <b id="blueCount">0</b>
+              <div class="muted">الفريق الأزرق</div>
+            </div>
+            <div class="score-pill score-red">
+              <b id="redCount">0</b>
+              <div class="muted">الفريق الأحمر</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="muted">أدوات</div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="resetBtn" class="btn">إعادة ضبط اللوحة</button>
+            <button id="clearStorage" class="btn warn">مسح التخزين</button>
+          </div>
+          <div style="margin-top:10px" class="muted">التغييرات على التحديات ضمن الكود.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- modal -->
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <h2 id="winnerTitle">الفائز</h2>
+      <p id="winnerMsg"></p>
+      <div style="margin-top:12px">
+        <button id="closeModal" class="btn">حسناً</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*********************************************************
+     * LOCAL VERSION (no Firebase)
+     * - Editable: change `defaultChallenges` below (25 items)
+     * - State persisted in localStorage under key 'bingo_local_game'
+     *********************************************************/
+
+    // === تعديل التحديات هنا بسهولة (25 عنصر) ===
+    const defaultChallenges = [
+      'اقتل خصم بـ Pickaxe',
+      'افتح 5 chests',
+      'احصل على headshot من >100m',
+      'قوم revive لزميل',
+      'اهبط في منطقة مشهورة (مثلاً Tilted)',
+      'استخدم launch pad مرتين',
+      'اقتل باستخدام explosive',
+      'اجمع أسلحة أزرق+بنفسجية',
+      'اشرب Big Shield',
+      'اصنع بناء دفاعي عالي',
+      'اقتل أثناء استخدام vehicle',
+      'قم emote بعد kill',
+      'اجمع 1000 mats',
+      'اهرب وأنت أقل من 10HP',
+      'استخدم mythic weapon',
+      'اصعد أعلى مبنى في الخريطة',
+      'افتح supply drop قبل الجميع',
+      'اقتل اثنين بنفس اللعبة',
+      'شارك heal مع زميل 3 مرات',
+      'اصنع trap وقتل به',
+      'اقتل وأنت راقص',
+      'اكمل تحدٍ بدون shields',
+      'سوي high five مع زميل',
+      'انقذ زميل من knock',
+      'افز بالجيم'
+    ];
+    // ==============================================
+
+    const STORAGE_KEY = 'bingo_local_game_v1';
+    const boardEl = document.getElementById('board');
+    const blueCountEl = document.getElementById('blueCount');
+    const redCountEl = document.getElementById('redCount');
+    const joinBlueBtn = document.getElementById('joinBlue');
+    const joinRedBtn = document.getElementById('joinRed');
+    const myTeamLabel = document.getElementById('myTeamLabel');
+    const statusMsg = document.getElementById('statusMsg');
+    const resetBtn = document.getElementById('resetBtn');
+    const clearStorageBtn = document.getElementById('clearStorage');
+    const overlay = document.getElementById('overlay');
+    const winnerTitle = document.getElementById('winnerTitle');
+    const winnerMsg = document.getElementById('winnerMsg');
+    const closeModal = document.getElementById('closeModal');
+
+    // state structure:
+    // { grid: [{id, challenge, owner:null/'blue'/'red'} ...], myTeam: 'blue'|'red'|null }
+    let state = loadState() || createInitialState();
+
+    // render once
+    render();
+
+    // handlers
+    joinBlueBtn.addEventListener('click', ()=>joinTeam('blue'));
+    joinRedBtn.addEventListener('click', ()=>joinTeam('red'));
+    resetBtn.addEventListener('click', async ()=>{
+      if(!confirm('هل تريد إعادة ضبط اللوحة؟')) return;
+      resetBoard();
+    });
+    clearStorageBtn.addEventListener('click', ()=>{
+      if(!confirm('سيحذف هذا كل التخزين المحلي. متأكد؟')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = createInitialState();
+      render();
+    });
+
+    closeModal.addEventListener('click', ()=>{
+      overlay.style.display = 'none';
+    });
+
+    // create initial state
+    function createInitialState(){
+      const grid = defaultChallenges.slice(0,25).map((t,i)=>({id:i,challenge:t,owner:null}));
+      const s = {grid, myTeam: null};
+      saveState(s);
+      return s;
+    }
+
+    function saveState(s){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return null;
+        const parsed = JSON.parse(raw);
+        // if challenges length mismatch, re-create grid but keep owners where possible
+        if(!parsed.grid || parsed.grid.length !== 25){
+          const newGrid = defaultChallenges.slice(0,25).map((t,i)=>({
+            id:i,
+            challenge:t,
+            owner: (parsed.grid && parsed.grid[i] && parsed.grid[i].owner) ? parsed.grid[i].owner : null
+          }));
+          parsed.grid = newGrid;
+          parsed.myTeam = parsed.myTeam || null;
+          saveState(parsed);
+        }
+        return parsed;
+      }catch(e){
+        return null;
+      }
+    }
+
+    function render(){
+      // board
+      boardEl.innerHTML = '';
+      state.grid.forEach((cell,idx)=>{
+        const el = document.createElement('div');
+        el.className = 'cell ' + (cell.owner ? cell.owner : 'neutral');
+        if(cell.owner && cell.owner !== state.myTeam && state.myTeam) el.classList.add('disabled');
+
+        const chall = document.createElement('div'); chall.className='challenge'; chall.textContent = cell.challenge;
+        const tag = document.createElement('div'); tag.className='tag';
+        tag.textContent = cell.owner ? (cell.owner==='blue' ? 'ملكية: أزرق' : 'ملكية: أحمر') : 'متاح';
+
+        el.appendChild(chall); el.appendChild(tag);
+        el.addEventListener('click', ()=>onCellClick(idx));
+        boardEl.appendChild(el);
+      });
+
+      // counts
+      const counts = {blue:0, red:0};
+      state.grid.forEach(c=>{ if(c.owner) counts[c.owner]++ });
+      blueCountEl.textContent = counts.blue;
+      redCountEl.textContent = counts.red;
+
+      // my team label and button states
+      if(state.myTeam){
+        myTeamLabel.textContent = 'أنت في فريق: ' + (state.myTeam==='blue' ? 'الأزرق' : 'الأحمر');
+      }else myTeamLabel.textContent = 'لم تنضم لأي فريق';
+
+      joinBlueBtn.classList.toggle('active', state.myTeam==='blue');
+      joinRedBtn.classList.toggle('active', state.myTeam==='red');
+
+      // small status
+      statusMsg.textContent = 'شبكة 5×5 — أول من يصل 13 أو صف كامل يفوز';
+      saveState(state);
+
+      // check win
+      checkWin();
+    }
+
+    function joinTeam(t){
+      // switching allowed; just set myTeam and save
+      state.myTeam = t;
+      saveState(state);
+      render();
+    }
+
+    function onCellClick(index){
+      if(!state.myTeam){
+        alert('اختر فريقك أولاً (فريق أحمر أو فريق أزرق)');
+        return;
+      }
+      const cell = state.grid[index];
+      // if owned by other team -> not allowed
+      if(cell.owner && cell.owner !== state.myTeam){
+        // nothing
+        return;
+      }
+      // toggle
+      cell.owner = (cell.owner === state.myTeam) ? null : state.myTeam;
+      saveState(state);
+      render();
+    }
+
+    function resetBoard(){
+      state.grid = defaultChallenges.slice(0,25).map((t,i)=>({id:i,challenge:t,owner:null}));
+      saveState(state);
+      render();
+    }
+
+    // win detection
+    let lastAnnouncedAt = 0;
+    function checkWin(){
+      const m = [];
+      for(let r=0;r<5;r++){
+        m[r]=[];
+        for(let c=0;c<5;c++) m[r][c] = state.grid[r*5+c].owner;
+      }
+      const teams = ['blue','red'];
+      for(const t of teams){
+        // rows
+        for(let r=0;r<5;r++){
+          if(m[r].every(x=>x===t)) return announceWin(t,'صف كامل (أفقي)');
+        }
+        // cols
+        for(let c=0;c<5;c++){
+          let ok=true; for(let r=0;r<5;r++) if(m[r][c]!==t) ok=false; if(ok) return announceWin(t,'صف كامل (عمودي)');
+        }
+        // diag TL-BR
+        let d1=true; for(let i=0;i<5;i++) if(m[i][i]!==t) d1=false; if(d1) return announceWin(t,'صف كامل (قطري)');
+        // diag TR-BL
+        let d2=true; for(let i=0;i<5;i++) if(m[i][4-i]!==t) d2=false; if(d2) return announceWin(t,'صف كامل (قطري)');
+      }
+      // 13 cells
+      const counts = {blue:0, red:0};
+      state.grid.forEach(c=>{ if(c.owner) counts[c.owner]++ });
+      if(counts.blue >= 13) return announceWin('blue','حصل 13 خلية');
+      if(counts.red >= 13) return announceWin('red','حصل 13 خلية');
+    }
+
+    function announceWin(team, reason){
+      // prevent double-fire
+      if(Date.now() - lastAnnouncedAt < 3000) return;
+      lastAnnouncedAt = Date.now();
+      winnerTitle.textContent = team === 'blue' ? 'الفريق الأزرق فاز!' : 'الفريق الأحمر فاز!';
+      winnerMsg.textContent = 'نوع الفوز: ' + reason;
+      overlay.style.display = 'flex';
+      // reset after short delay so players see the win (adjustable)
+      setTimeout(()=>{ resetBoard(); overlay.style.display='none'; }, 2200);
+    }
+
+    // initial ensure grid length = 25 and challenges editable
+    (function ensureGrid(){
+      if(!state.grid || state.grid.length !== 25){
+        state = createInitialState();
+        render();
+      }
+    })();
+
+    // keyboard hint: R to reset
+    window.addEventListener('keydown', (e)=>{
+      if(e.key.toLowerCase()==='r') resetBoard();
+    });
+  </script>
+</body>
+</html>
